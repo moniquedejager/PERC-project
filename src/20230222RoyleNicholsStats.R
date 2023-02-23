@@ -1,38 +1,53 @@
 # with the presence/absence matrices per density, we can use the RN occupany
-# model to examine whether it provides a significant difference between
-# pairs of simulations with different densities.
+# model to examine whether it provides a significan_intervals difference between
+# pairs of simulations with differen_intervals densities.
 
-# We can do this with different parameter settings:
+# We can do this with differen_intervals parameter settings:
 # - density-combinations
-# (also same densties against each other to examine false significant effects)
-# - time intervals
+# - time in_intervalservals
 # - study durations
 # - number of camera traps
 # do this for 10 simulation runs, using 10 parallel sessions...
 
-royle_nichols_stats <- function(simNr) {
+# TODO iteraties eruit halen en parameter combinaties inlezen uit file!
+
+royle_nichols_stats <- function(sim_nr) {
   library(unmarked)
 
   x <- vector(length = 0)
-  DATA <- data.frame(dens1 = x, dens2 = x, dT = x, StudyDuration = x, nCams = x, z = x, P = x, Ppresence = x)
-  outputfile <- paste("./data/processed/PresenceAbsence/RoyleNicholsStats", simNr, ".txt")
+  data <- data.frame(
+    dens1 = x,
+    dens2 = x,
+    time_in_intervalserval = x,
+    study_duration = x,
+    n_cams = x,
+    z = x,
+    P = x,
+    p_presence = x)
+
+  outputfile <- paste("./data/processed/PresenceAbsence/RoyleNicholsStats",
+                      sim_nr,
+                      ".txt")
+
   if (!file.exists(outputfile)) {
-    write.table(DATA, outputfile, col.names = T, row.names = F)
+    write.table(data, outputfile, col.names = TRUE, row.names = FALSE)
   }
 
-  for (i1 in 1:18)
-  {
-    for (i2 in (i1 + 1):19)
-    {
-      studyDuration <- 365
-      nCams <- 25
+  for (i1 in 1:18){
+    for (i2 in (i1 + 1):19){
+      study_duration <- 365
+      n_cams <- 25
 
       print(paste(i1, i2))
-      df1 <- as.matrix(read.table(paste("./data/processed/PresenceAbsence/PresAbs", i1, simNr, ".txt")))
+      df1 <- as.matrix(
+        read.table(paste("./data/processed/PresenceAbsence/PresAbs",
+                         i1, sim_nr, ".txt")))
       dens1 <- df1[1, 1]
       df1 <- df1[, 2:366]
 
-      df2 <- as.matrix(read.table(paste("./data/processed/PresenceAbsence/PresAbs", i2, simNr, ".txt")))
+      df2 <- as.matrix(
+        read.table(paste("./data/processed/PresenceAbsence/PresAbs",
+                         i2, sim_nr, ".txt")))
       dens2 <- df2[1, 1]
       df2 <- df2[, 2:366]
 
@@ -40,40 +55,53 @@ royle_nichols_stats <- function(simNr) {
         location = factor(c(rep("A", 25), rep("B", 25))),
         density = c(rep(dens1, 25), rep(dens2, 25))
       )
-      Dets <- rbind(df1, df2)
+      dets <- rbind(df1, df2)
 
-      for (nCams in 25) # 25:5)
-      {
-        for (studyDuration in 50) # round(exp(log(365)*(10:30/30))))
-        {
-          for (dT in 1) # unique(round(1.1^(4:54))))
-          {
-            if (dT <= studyDuration / 2) {
-              SD <- studyDuration
-              nT <- floor(SD / dT)
-              SD <- nT * dT
+      for (n_cams in 25) { # 25:5)
+        for (study_duration in 50) { # round(exp(log(365)*(10:30/30))))
+          for (time_in_intervalserval in 1) { # unique(round(1.1^(4:54))))
+            if (time_in_intervalserval <= study_duration / 2) {
+              sd <- study_duration
+              n_intervals <- floor(sd / time_in_intervalserval)
+              sd <- n_intervals * time_in_intervalserval
 
-              Dets2 <- Dets[, 1:SD]
-              Dets3 <- matrix(0, 50, nT)
-              # voor iedere rij in Dets2, presence/absence samenvoegen per tijdsinterval...
-              x <- sort(rep(1:nT, dT))
-              for (i3 in 1:(nCams * 2)) {
-                Dets3[i3, ] <- tapply(Dets2[i3, ], x, max)
+              dets2 <- dets[, 1:sd]
+              dets3 <- matrix(0, 50, n_intervals)
+
+              # voor iedere rij in dets2, presence/absence samenvoegen per
+              # tijdsintervalserval...
+              x <- sort(rep(1:n_intervals, time_in_intervalserval))
+              for (i3 in 1:(n_cams * 2)) {
+                dets3[i3, ] <- tapply(dets2[i3, ], x, max)
               }
 
               # randomly select cameras to use...
-              camsUsed <- sort(rank(runif(25))[1:nCams]) # using nCams random camera traps.
-              Dets3 <- Dets3[c(camsUsed, camsUsed + 25), ]
-              cov2 <- cov[c(camsUsed, camsUsed + 25), ]
+              cams_used <- sort(rank(runif(25))[1:n_cams])
+              # using n_cams random camera traps.
+              dets3 <- dets3[c(cams_used, cams_used + 25), ]
+              cov2 <- cov[c(cams_used, cams_used + 25), ]
 
-              Ppresence <- mean(rowSums(Dets3) > 0)
+              p_presence <- mean(rowSums(dets3) > 0)
 
-              umf <- unmarkedFrameOccu(y = Dets3, siteCovs = cov2)
+              umf <- unmarkedFrameOccu(y = dets3, siteCovs = cov2)
               m1 <- occuRN(~1 ~ location, umf)
               s1 <- summary(m1)
 
-              DATA <- data.frame(dens1 = dens1, dens2 = dens2, dT = 1, StudyDuration = SD, nCams = nCams, z = s1$state$z[2], P = s1$state$`P(>|z|)`[2], Ppresence = Ppresence)
-              write.table(DATA, outputfile, append = T, col.names = F, row.names = F)
+              data <- data.frame(
+                dens1 = dens1,
+                dens2 = dens2,
+                time_in_intervalserval = 1,
+                study_duration = sd,
+                n_cams = n_cams,
+                z = s1$state$z[2],
+                P = s1$state$`P(>|z|)`[2],
+                p_presence = p_presence)
+
+              write.table(
+                data, outputfile,
+                append = TRUE,
+                col.names = FALSE,
+                row.names = FALSE)
             }
           }
         }
@@ -93,5 +121,4 @@ results <- parSapply(cl, 1:10, royle_nichols_stats)
 # stop the cluster:
 stopCluster(cl)
 
-# blabla
-library(lintr)
+library(lin_intervalsr)
