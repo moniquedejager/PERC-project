@@ -1,12 +1,10 @@
-# 1. create an outputfile:
-# source('./src/functions/create_outputfile.R')
+# Create an outputfile. If the outputfile does not yet exist, create it
+# and insert the column names.  
 
 outputfile <- paste("./data/processed/PresenceAbsence/RoyleNicholsStats",
                     sim_nr,
                     ".txt")
 
-# if the outputfile does not yet exist, create it
-# and insert the column names: 
 if (!file.exists(outputfile)) {
   x <- vector(length = 0)
   data <- data.frame(

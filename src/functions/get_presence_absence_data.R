@@ -1,5 +1,4 @@
-# 2b. Get the presence/absence data:
-#source('./src/functions/get_presence_absence_data.R')
+# Get the presence/absence data from the files.
 
 df1 <- as.matrix(
   read.table(paste("./data/processed/PresenceAbsence/PresAbs",

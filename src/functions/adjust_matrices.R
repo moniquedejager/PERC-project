@@ -1,5 +1,5 @@
-# 3. adjust the detection and covariates matrices:
-# source('./src/functions/adjust_matrices.R')
+# We need to adjust the detection and covariates matrices to the
+# parameters used in the i'th row of the values table
 
 n_intervals <- floor(study_duration / time_interval)
 study_duration <- n_intervals * time_interval
