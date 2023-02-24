@@ -15,6 +15,30 @@ and writes the z- and p-values to a file
 - **get_presence_absence_data.R**L Gets the presence/absence data of the two focal densities from the files 
 - **adjust_matrices.R**: Adjusts the presence/absence matrices
 
+## Dependency information
+```
+R version 4.1.2 (2021-11-01)
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+Running under: Windows 10 x64 (build 19042)
+
+Matrix products: default
+
+locale:
+[1] LC_COLLATE=Dutch_Netherlands.1252  LC_CTYPE=Dutch_Netherlands.1252    LC_MONETARY=Dutch_Netherlands.1252 LC_NUMERIC=C                      
+[5] LC_TIME=Dutch_Netherlands.1252    
+
+attached base packages:
+[1] parallel  stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] unmarked_1.2.5 lintr_3.0.2   
+
+loaded via a namespace (and not attached):
+ [1] rex_1.2.0       Rcpp_1.0.7      xml2_1.3.2      splines_4.1.2   MASS_7.3-54     lattice_0.20-45 R6_2.5.1        minqa_1.2.4     pbapply_1.5-0  
+[10] plyr_1.8.6      tools_4.1.2     grid_4.1.2      nlme_3.1-153    cyclocomp_1.1.0 withr_2.5.0     remotes_2.4.1   lme4_1.1-27.1   lazyeval_0.2.2 
+[19] rprojroot_2.0.2 crayon_1.4.2    processx_3.5.2  Matrix_1.3-4    nloptr_1.2.2.2  callr_3.7.0     ps_1.6.0        compiler_4.1.2  desc_1.4.0     
+[28] boot_1.3-28    
+```
 
 ## Project organization
 - PG = project-generated
