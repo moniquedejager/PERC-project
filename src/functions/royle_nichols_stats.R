@@ -1,33 +1,35 @@
-# this function estimates relative occupancies between two locations
-# and writes the z- and p-values to a file:
 royle_nichols_stats <- function(sim_nr) {
-  library(unmarked)
+  #' This function estimates relative occupancies between two locations
+  #' and writes the z- and p-values to a file
   
-  # 1. create an outputfile:
+  #' With the presence/absence matrices per density, 
+  #' we can use the Royle-Nichols occupany model to 
+  #' examine whether it provides a significant difference between
+  #' pairs of simulations with different densities.
+  
+  library(unmarked)
   source('./src/functions/create_outputfile.R')
   
-  # get the parameter values from the table:
   values_all <- read.table('./data/temp/parameter_combinations_royle_nichols_stats.txt', header=TRUE)
   
-  # for each parameter value combination in values_all, 
-  # do the analysis:
   for (i in 1:length(values_all$d1)){
-    # 2. Get the parameter values and the presence/absence data:
     source('./src/functions/get_param_values.R')
     source('./src/functions/get_presence_absence_data.R')
       
-    # 3. adjust the detection and covariates matrices:
+    # We need to adjust the detection and covariates matrices to the
+    # parameters used in the i'th row of the values table
     source('./src/functions/adjust_matrices.R')
     
-    # 4. What is the proportion of cameras with sightings?
+    # What is the proportion of cameras with sightings?
     p_presence <- mean(rowSums(dets3) > 0)
     
-    # 5. Do the actual analysis:
+    # This code does the actual analysis on the adjusted matrices:
     umf <- unmarkedFrameOccu(y = dets3, siteCovs = cov2)
     m1 <- occuRN(~1 ~ location, umf)
     s1 <- summary(m1)
        
-    # 6. Write the results to the outputfile:          
+    # The data needs to be written to an output file,
+    # so we can use this in the next analyses. 
     data <- data.frame(
       dens1 = dens1,
       dens2 = dens2,
