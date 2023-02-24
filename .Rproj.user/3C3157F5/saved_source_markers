@@ -1,1 +1,1 @@
-{"active_set":"","sets":[]}
+{"active_set":"lintr","sets":[{"name":"lintr","base_path":"","markers":[{"type":4,"path":"~/Marijke en Patrick - PE&RC project/new/src/20230222RoyleNicholsStats.R","line":14,"column":1,"message":"[cyclocomp_linter] Functions should have cyclomatic complexity of less than 15, this has 30.","log_path":"","log_line":-1,"show_error_list":true}]}]}
