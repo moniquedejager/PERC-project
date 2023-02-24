@@ -8,17 +8,33 @@ royle_nichols_stats <- function (sim_nr) {
   #' pairs of simulations with different densities.
   
   library(unmarked)
+  source('./src/functions/get_presence_absence_data.R')
   source('./src/functions/create_outputfile.R')
+  source('./src/functions/adjust_matrices.R')
+  create_outputfile(sim_nr)
   
   values_all <- read.table('./data/temp/parameter_combinations_royle_nichols_stats.txt', header=TRUE)
   
   for (i in 1:length(values_all$i1)){
-    source('./src/functions/get_param_values.R')
-    source('./src/functions/get_presence_absence_data.R')
+    
+    # Get the parameter values from the table.
+    values <- values_all[i,]
+    study_duration <- values$study_duration
+    time_interval <- values$time_interval
+    n_cams <- values$n_cams
+    i1 <- values$i1
+    i2 <- values$i2
+    
+    # get the presence/absence matrices for the given simulation runs. 
+    data <- get_pres_abs_data(i1, i2, sim_nr)
+    cov <- data[,1:2]
+    dets <- data[,3:367]
       
     # We need to adjust the detection and covariates matrices to the
     # parameters used in the i'th row of the values table
-    source('./src/functions/adjust_matrices.R')
+    data <- adjust_matrices(study_duration, time_interval, dets, cov)
+    cov2 <- data[,1:2]
+    dets3 <- data[,3:(length(data$location))]
     
     # What is the proportion of cameras with sightings?
     p_presence <- mean(rowSums(dets3) > 0)

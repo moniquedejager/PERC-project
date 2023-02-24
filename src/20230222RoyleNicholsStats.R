@@ -25,10 +25,15 @@ source('./src/functions/create_table.R')
 # 2. 
 source('./src/functions/royle_nichols_stats.R')
 
+# Because the parellel running of the model does not work anymore
+# (I put the code into different source files, and now it
+# does not recognize the sim_nr anymore), you can run it here for
+# a single simulation run:
+royle_nichols_stat(1)
+
+# To make this work, we need to create functions inside the source files... 
 # 3. run in parallel:
 library(parallel)
 cl <- makeCluster(10)
 results <- parSapply(cl, 1:10, royle_nichols_stats)
 stopCluster(cl)
-
-# TODO: create functions inside the parallel function, otherwise it does not work!! 
