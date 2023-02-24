@@ -18,7 +18,7 @@
 # for the number of camera traps per location,
 # we generally use 25:5.
 time_interval <- 1
-study_duration <- 365
+study_duration <- 50
 n_cams <- 20
 source('./src/functions/create_table.R')
 
@@ -30,3 +30,5 @@ library(parallel)
 cl <- makeCluster(10)
 results <- parSapply(cl, 1:10, royle_nichols_stats)
 stopCluster(cl)
+
+# TODO: create functions inside the parallel function, otherwise it does not work!! 

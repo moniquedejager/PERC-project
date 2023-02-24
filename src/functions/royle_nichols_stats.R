@@ -1,4 +1,4 @@
-royle_nichols_stats <- function(sim_nr) {
+royle_nichols_stats <- function (sim_nr) {
   #' This function estimates relative occupancies between two locations
   #' and writes the z- and p-values to a file
   
