@@ -12,7 +12,7 @@ royle_nichols_stats <- function(sim_nr) {
   
   values_all <- read.table('./data/temp/parameter_combinations_royle_nichols_stats.txt', header=TRUE)
   
-  for (i in 1:length(values_all$d1)){
+  for (i in 1:length(values_all$i1)){
     source('./src/functions/get_param_values.R')
     source('./src/functions/get_presence_absence_data.R')
       
