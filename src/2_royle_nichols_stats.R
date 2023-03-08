@@ -23,7 +23,7 @@ royle_nichols_stats <- function(sim_nr) {
                      z = x, 
                      P = x, 
                      p_presence = x)
-  outputfile <- paste('./results/PresenceAbsence/royle_nichols_stats', 
+  outputfile <- paste('./results/output/royle_nichols_stats', 
                       sim_nr, '.txt')
   if (!file.exists(outputfile)) { 
     write.table(data, outputfile, col.names = TRUE, row.names = FALSE)
