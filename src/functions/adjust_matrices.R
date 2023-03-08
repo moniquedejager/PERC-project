@@ -11,7 +11,7 @@ adjust_matrices <- function(study_duration, time_interval, dets, cov) {
   # voor iedere rij in dets2, presence/absence samenvoegen per
   # tijdsintervalserval...
   x <- sort(rep(1:n_intervals, time_interval))
-  for (i3 in 1:(n_cams * 2)) {
+  for (i3 in 1:50) {
     dets3[i3, ] <- tapply(dets2[i3, ], x, max)
   }
   
