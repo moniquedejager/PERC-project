@@ -37,6 +37,8 @@ n <- tapply(species, species, length)
 
 # write data to new input files, as summarized per species per camera per day:
 uSpec <- sort(unique(species))
+write.table(uSpec, './data/processed/FSC and nonFSC data/species.txt',
+            append=FALSE, row.names = FALSE, col.names = FALSE)
 for (spec in uSpec)
 {
   if (n[uSpec == spec] > 150)
