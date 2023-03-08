@@ -11,6 +11,7 @@ source('/src/2_royle_nichols_stats.R')
 # 3. The analysis of the royle-nichols results #####
 source('./src/3_royle_nichols_analysis.R')
 # 4. The application of the analysis results on real data #####
+source('./src/4_compare_FSC_and_nonFSC_data.R')
 
 
 
