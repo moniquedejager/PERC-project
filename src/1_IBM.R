@@ -8,7 +8,7 @@ cam_trap = function(sim_nr)
   # in # individuals per 100km2
   
   # per density, we simulate camera trapping events:
-  for (i_dens in length(densities)) {
+  for (i_dens in 1:length(densities)) {
     # We consider periodic boundary conditions.  
     # In case of low densities (< 10 individuals/100km2), 
     # Individuals move randomly within a space of 7,000 x 7,000 patches, 
@@ -84,8 +84,8 @@ cam_trap = function(sim_nr)
 # use parallel runs to increase computational speed:
 library(parallel)
 n_cores <- detectCores()
-cl <- makeCluster(min(20, n_cores))
-results <- parSapply(cl, 1:100, cam_trap)
+cl <- makeCluster(min(10, n_cores))
+results <- parSapply(cl, 1:10, cam_trap)
 stopCluster(cl)
 
 

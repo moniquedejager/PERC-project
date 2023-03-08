@@ -11,5 +11,5 @@
 # 5. The application of the analysis results on real data
 
 # 1. The individual-based model that generates camera-trapping events #####
-source('1_IBM.R')
+source('./src/1_IBM.R')
 
