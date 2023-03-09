@@ -37,35 +37,33 @@ n <- tapply(species, species, length)
 
 # write data to new input files, as summarized per species per camera per day:
 uSpec <- sort(unique(species))
+uSpec <- uSpec[n > 150]
 write.table(uSpec, './data/processed/FSC and nonFSC data/species.txt',
             append=FALSE, row.names = FALSE, col.names = FALSE)
 for (spec in uSpec)
 {
-  if (n[uSpec == spec] > 150)
-  {
-    m2 <- m[species == spec,]
-    
-    date1 <- as.Date(m2$Camera.Start.Date.New)
-    date2 <- as.Date(m2$Photo.Date.New)
-    x <- interval(ymd(date1),ymd(date2))
-    m2$x <- x %/% days(1)
-    
-    group <- paste(m2$Unique_CT_Name, m2$x, sep='-')
-    i <- 1:length(group)
-    i <- tapply(i, group, min)
-    
-    m3 <- m2[i,]
-    pres_abs <- pres_abs_template
+  m2 <- m[species == spec,]
+  
+  date1 <- as.Date(m2$Camera.Start.Date.New)
+  date2 <- as.Date(m2$Photo.Date.New)
+  x <- interval(ymd(date1),ymd(date2))
+  m2$x <- x %/% days(1)
+  
+  group <- paste(m2$Unique_CT_Name, m2$x, sep='-')
+  i <- 1:length(group)
+  i <- tapply(i, group, min)
+  
+  m3 <- m2[i,]
+  pres_abs <- pres_abs_template
 
-    for (i in 1:length(m3$x)) {
-      pres_abs[m3$Unique_CT_Name[i] == cov$cam, m3$x[i]] <- 1
-    }
-    
-    filename <- paste('./data/processed/FSC and nonFSC data/pres_abs', 
-                      spec, '.txt')
-    write.table(pres_abs, filename, 
-                row.names=FALSE, col.names=FALSE, append=FALSE)
-  }  
+  for (i in 1:length(m3$x)) {
+    pres_abs[m3$Unique_CT_Name[i] == cov$cam, m3$x[i]] <- 1
+  }
+  
+  filename <- paste('./data/processed/FSC and nonFSC data/pres_abs', 
+                    spec, '.txt')
+  write.table(pres_abs, filename, 
+              row.names=FALSE, col.names=FALSE, append=FALSE)
 }
 
 

@@ -1,0 +1,1 @@
+"species" "time_interval" "study_duration" "n_cams" "z" "P" "p_presence"
