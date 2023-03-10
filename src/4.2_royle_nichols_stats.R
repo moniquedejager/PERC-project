@@ -60,8 +60,8 @@ royle_nichols_stats = function(i){
                          time_interval = time_interval, 
                          study_duration = study_duration, 
                          n_cams = length(cov2$Cam), 
-                         z = s$state[length(s$state$Estimate),3], 
-                         P = s$state[length(s$state$Estimate),4], 
+                         z = s1$state[length(s1$state$Estimate),3], 
+                         P = s1$state[length(s1$state$Estimate),4], 
                          p_presence=p_presence)
       write.table(data, outputfile, 
                   append=TRUE, col.names = FALSE, row.names = FALSE)
