@@ -8,3 +8,6 @@ source('./src/4.1_create_pres_abs_matrices.R')
 # 4.2: Calculate the royle-nichols stats per species, study duration, 
 # and time interval:
 source('/src/4.2_royle_nichols_stats.R')
+
+# 4.3: Analyse the results:
+source('/src/4.3_analyse_results.R')

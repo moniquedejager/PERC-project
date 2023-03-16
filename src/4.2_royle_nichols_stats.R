@@ -50,12 +50,20 @@ royle_nichols_stats = function(i){
       umf <- unmarkedFrameOccu(y=dets4, siteCovs=cov2)
       
       if (length(unique(cov$Cluster)) == 1) {
-        mod   = occuRN(~Visibility - 1 ~SiteType, umf)
+        mod <- occuRN(~Visibility - 1 ~SiteType, umf)
       } else {
-        mod   = occuRN(~Visibility - 1 ~Cluster + SiteType, umf)
+        mod <- occuRN(~Visibility - 1 ~Cluster + SiteType, umf)
       }
       
       s1 <- summary(mod)
+      
+      # sometimes the model has too many covariates and cannot compute all 
+      # the parameters. We should then fall back on a simpler model: 
+      if (is.na(s1$state[length(s1$state$Estimate),3])){
+        mod <- occuRN(~Visibility - 1 ~SiteType, umf)
+        s1 <- summary(mod)
+      }
+      
       data <- data.frame(species = spec, 
                          time_interval = time_interval, 
                          study_duration = study_duration, 
