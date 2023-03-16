@@ -35,4 +35,3 @@ estimate_interval_size <- function(sampling_effort, Ppresence){
   return(dT)
 }
 
-

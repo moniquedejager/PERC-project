@@ -16,6 +16,8 @@ source("./src/estimate_interval_size.R")
 source('./src/4_compare_FSC_and_nonFSC_data.R')
 
 
-
+# How far off are the RN model results when using dT = 5 days 
+# instead of optimal interval size? #####
+source('./src/5_examine_5day_rule.R')
 
 
