@@ -5,4 +5,5 @@
 /data/temp
 /data/processed
 /data/raw
+/results/output
 .Rproj.user
