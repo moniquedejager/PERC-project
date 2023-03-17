@@ -151,7 +151,7 @@ ggplot(df3[sel,], aes(x=original_SD, y=Ppres, fill=dT)) +
   ylab('Ppresence')+
   theme(legend.position = "top") 
 
-# With study duration and number of cameras seperately:
+# With study duration and number of cameras separately:
 y <- df3$z
 x1 <- df3$StudyDuration
 x2 <- df3$nCams
@@ -198,6 +198,29 @@ mod1 <- lm(y~x1 + x2 + x3 +
 summary(mod1)
 
 df3$est_z = mod1$fitted.values
+
+y <- df3$dT
+mod2 <- glm(y~x1 + x2 + x3 + 
+             x1:x2 + x1:x3 +  
+             x2:x3 +
+             x1:x2:x3 + 
+             
+             I(x1^2) + I(x2^2) + I(x3^2) + 
+             I(x1^2):I(x2^2) + I(x1^2):I(x3^2) + 
+             
+             I(x1^3) + I(x2^3) + I(x3^3) + 
+             I(x1^3):I(x2^3) + I(x1^3):I(x3^3) + 
+             I(x2^3):I(x3^3) + 
+             I(x1^3):I(x2^3):I(x3^3) + 
+             
+             I(x1^4) + I(x2^4) + I(x3^4) + 
+             I(x1^4):I(x2^4) + I(x1^4):I(x3^4) + 
+             I(x1^4):I(x2^4):I(x3^4), family='poisson')
+summary(mod2)
+with(summary(mod2), 1 - deviance/null.deviance)
+# R2 = 0.38
+
+
 
 # with study duration and camera numbers combined:
 y <- df3$z
