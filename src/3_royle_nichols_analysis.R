@@ -216,11 +216,39 @@ mod2 <- glm(y~x1 + x2 + x3 +
              I(x1^4) + I(x2^4) + I(x3^4) + 
              I(x1^4):I(x2^4) + I(x1^4):I(x3^4) + 
              I(x1^4):I(x2^4):I(x3^4), family='poisson')
-summary(mod2)
+s = summary(mod2)
 with(summary(mod2), 1 - deviance/null.deviance)
 # R2 = 0.38
+df3$est_dT = ceiling(mod2$fitted.values)
 
+sel = (df3$nCams %in% c(5, 10, 15, 20, 25)) & (df3$est_z > 1.96)
+df3$SD2 <- round(log(df3$original_SD)/log(365),1)
 
+p1 <- ggplot(df3[sel,], aes(x=SD2, y=Ppres, fill=est_z)) +
+  geom_raster() + 
+  scale_x_continuous(breaks = c(0.4, 0.6, 0.8, 1), labels=c(10, 30, 100, 365)) +
+  facet_wrap(vars(nCams), ncol=1) + 
+  scale_fill_continuous(type='viridis', name='Estimated z-value') + 
+  xlab('Sampling period (days)') + 
+  ylab('Ppresence')+
+  theme(legend.position = "top") 
+
+p2 <- ggplot(df3[sel,], aes(x=SD2, y=Ppres, fill=est_dT)) +
+  geom_raster() + 
+  #scale_y_continuous(trans='log10') + 
+  scale_x_continuous(breaks = c(0.4, 0.6, 0.8, 1), labels=c(10, 30, 100, 365)) +
+  facet_wrap(vars(nCams), ncol=1) + 
+  scale_fill_continuous(type='viridis', trans='log10',name='Optimal interval size (days)') + 
+  xlab('Sampling period (days)') + 
+  ylab('Ppresence')+
+  theme(legend.position = "top") 
+
+windows(height=10, width=5)
+ggarrange(p1, p2 + rremove("ylab"))
+
+write.table(s$coefficients, 
+            './results/output/simulations/to_estimate_time_interval_sizes_I.txt', 
+            append=FALSE, row.names = FALSE, col.names=TRUE)
 
 # with study duration and camera numbers combined:
 y <- df3$z
@@ -296,17 +324,6 @@ p2 <- ggplot(df3[sel,], aes(x=round(log(sampling_effort), 1), y=Ppres, fill=est_
 
 ggarrange(p1, p2 + rremove("ylab"))
 
-df3$dT_dif = abs(df3$dT - df3$est_dT)
-ggplot(df3[sel,], aes(x=original_SD, y=Ppres, fill=dT_dif)) +
-  geom_raster() + 
-  #scale_y_continuous(trans='log10') + 
-  scale_x_continuous(trans='log10') +
-  facet_wrap(vars(nCams), ncol=1) + 
-  scale_fill_continuous(type='viridis', trans='log10',name='Difference interval size (days)') + 
-  xlab('Sampling period (days)') + 
-  ylab('Ppresence')+
-  theme(legend.position = "top") 
-
 write.table(s$coefficients, 
-            './results/output/simulations/to_estimate_time_interval_sizes.txt', 
+            './results/output/simulations/to_estimate_time_interval_sizes_II.txt', 
             append=FALSE, row.names = FALSE, col.names=TRUE)

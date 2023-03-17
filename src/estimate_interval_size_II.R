@@ -8,7 +8,7 @@ estimate_interval_size <- function(sampling_effort, Ppresence){
   x2 <- log(Ppresence/(1 - Ppresence))
   
   b <- read.table(
-    './results/output/simulations/to_estimate_time_interval_sizes.txt', 
+    './results/output/simulations/to_estimate_time_interval_sizes_II.txt', 
     header=TRUE)$Estimate
   
   y <- b[1] + 
