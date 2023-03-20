@@ -13,7 +13,7 @@ estimate_interval_size <- function(sampling_effort, Ppresence, max_interval_size
     './results/output/simulations/to_estimate_z_values.txt', 
     header=TRUE)$Estimate
   
-  y <- b[1] + 
+  z <- b[1] + 
     x1*b[2] + 
     x2*b[3] + 
     x3*b[4] + 
@@ -50,8 +50,8 @@ estimate_interval_size <- function(sampling_effort, Ppresence, max_interval_size
     x1^3*x2^3*x3^3*b[27] + 
     x1^4*x2^4*x3^4*b[28]
     
-  plot(x1, y)
-  dT <- x1[y == max(y)]
+  plot(x1, z)
+  dT <- x1[z == max(z)]
   
   return(dT)
 }
