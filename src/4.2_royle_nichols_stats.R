@@ -3,6 +3,8 @@
 
 royle_nichols_stats = function(i){
   library(unmarked)
+  library(ggplot2)
+  library(ggpubr)
   source("./src/estimate_interval_size.R")
   
   # i is the species number:
@@ -30,18 +32,72 @@ royle_nichols_stats = function(i){
   # start at a maximum time interval size that is half of the median
   # survey effort per camera.
   
-  max_interval_size <- floor(median(survey_effort_per_cam)/2)
-  dets3 <- dets[survey_effort_per_cam >= (max_interval_size*2),]
-  survey_effort <- length(dets3[!is.na(dets3)])
-  dets3[is.na(dets3)] <- 0
-  Ppresence <- sum(rowSums(dets3) > 0) / length(dets3[,1])
-  optimal_interval_size <- estimate_interval_size(survey_effort, Ppresence, max_interval_size)
+  df <- data.frame(max_interval_size = 
+                     round(quantile(survey_effort_per_cam, 0.05)/2):
+                     round(quantile(survey_effort_per_cam, 0.75)/2),
+                   survey_effort = 0,
+                   Ppresence = 0,
+                   optimal_interval_size = 0,
+                   z = 0)
   
-  # survey_effort moet een positief lineair verband hebben met de z-waarde, 
-  # dit moet dus veranderd worden in het polynomial model waarmee we de 
-  # z-waarde berekenen! 
+  for (j in df$max_interval_size){
+    dets3 <- dets[survey_effort_per_cam >= (j*2),]
+    survey_effort <- length(dets3[!is.na(dets3)])
+    df$survey_effort[df$max_interval_size == j] <- survey_effort
+    dets3[is.na(dets3)] <- 0
+    Ppresence <- sum(rowSums(dets3) > 0) / length(dets3[,1])
+    df$Ppresence[df$max_interval_size == j] <- Ppresence
+      
+    df$optimal_interval_size[df$max_interval_size == j] <- 
+      estimate_interval_size(survey_effort, Ppresence, j)[1]
+    df$z[df$max_interval_size == j] <- 
+      estimate_interval_size(survey_effort, Ppresence, j)[2]
+  }
+  p1 <- ggplot(df, aes(x=max_interval_size, y=z)) + 
+    geom_point() + 
+    xlab('Maximum interval size (days)') + 
+    ylab('Z-value')
   
+  p2 <- ggplot(df, aes(x=max_interval_size, y=survey_effort)) + 
+    geom_point() + 
+    xlab('Maximum interval size (days)') + 
+    ylab('Survey effort (total # camera days)')
   
+  p3 <- ggplot(df, aes(x=max_interval_size, y=Ppresence)) + 
+    geom_point() +
+    xlab('Maximum interval size (days)') + 
+    ylab('Proportion of cameras with detections')
+  
+  p4 <- ggplot(df, aes(x=max_interval_size, y=optimal_interval_size)) + 
+    geom_point() +
+    xlab('Maximum interval size (days)') + 
+    ylab('Optimal interval size (days)')
+  
+  windows(height=8, width=8)
+  plot <- ggarrange(p2, p3, p1, p4, labels=c('A', 'B', 'C', 'D'))
+  annotate_figure(plot, top=text_grob(spec, face='bold.italic'))
+  
+  optimal_interval_size <- df$optimal_interval_size[(df$survey_effort*df$z) == 
+                                                      max(df$survey_effort*df$z)]
+  
+  tiff(filename=paste('./results/figures/FSC and nonFSC/optimal interval size', spec, '.tiff'), 
+       height=5, width=5, units='in', res=300)
+  coeff <- 1/3000
+  ggplot(df, aes(x=max_interval_size, y=survey_effort*z)) + 
+    geom_point(color=' darkgreen') + 
+    geom_line(color=' darkgreen') + 
+    geom_point(aes(y=optimal_interval_size*3000), color=' darkblue') + 
+    geom_line(aes(y=optimal_interval_size*3000), color=' darkblue') + 
+    xlab('Maximum interval size (days)') + 
+    ylab('Survey effort (days) x z-value') +
+    ggtitle(spec) + 
+    scale_y_continuous(sec.axis = 
+                         sec_axis(~.*coeff, name="Optimal interval size (days)")) +
+    theme(plot.title = element_text(face='bold.italic'),
+          axis.title.y.left = element_text(color='darkgreen'),
+          axis.title.y.right = element_text(color='darkblue')) + 
+    geom_vline(xintercept=optimal_interval_size, linetype='dashed')
+  dev.off()
   
   # create the output file:
   x <- vector(length=0)

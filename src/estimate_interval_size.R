@@ -50,8 +50,9 @@ estimate_interval_size <- function(sampling_effort, Ppresence, max_interval_size
     
   plot(x1, z)
   dT <- x1[z == max(z)]
+  maxz <- max(z)
   
-  return(dT)
+  return(c(dT, maxz))
 }
 
 
