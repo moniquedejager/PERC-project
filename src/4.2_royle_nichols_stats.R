@@ -48,12 +48,18 @@ royle_nichols_stats = function(i){
     Ppresence <- sum(rowSums(dets3) > 0) / length(dets3[,1])
     df$Ppresence[df$max_interval_size == j] <- Ppresence
       
-    df$optimal_interval_size[df$max_interval_size == j] <- 
-      estimate_interval_size(survey_effort, Ppresence, j)[1]
-    df$z[df$max_interval_size == j] <- 
-      estimate_interval_size(survey_effort, Ppresence, j)[2]
+    if ((Ppresence == 0)|(Ppresence == 1)){
+      df$optimal_interval_size[df$max_interval_size == j] <- NA
+      df$z[df$max_interval_size == j] <- NA
+    }else{
+      df$optimal_interval_size[df$max_interval_size == j] <- 
+        estimate_interval_size(survey_effort, Ppresence, j)[1]
+      df$z[df$max_interval_size == j] <- 
+        estimate_interval_size(survey_effort, Ppresence, j)[2]
+    }
   }
   
+  df <- df[!is.na(df$optimal_interval_size),]
   optimal_interval_size <- df$optimal_interval_size[(df$survey_effort*df$z) == 
                                                       max(df$survey_effort*df$z)]
   
@@ -63,8 +69,8 @@ royle_nichols_stats = function(i){
   ggplot(df, aes(x=max_interval_size, y=survey_effort*z)) + 
     geom_point(color=' darkgreen') + 
     geom_line(color=' darkgreen') + 
-    geom_point(aes(y=optimal_interval_size*3000), color=' darkblue') + 
-    geom_line(aes(y=optimal_interval_size*3000), color=' darkblue') + 
+    geom_point(aes(x=max_interval_size, y=optimal_interval_size*3000), color=' darkblue') + 
+    geom_line(aes(x=max_interval_size, y=optimal_interval_size*3000), color=' darkblue') + 
     xlab('Maximum interval size (days)') + 
     ylab('Survey effort (days) x z-value') +
     ggtitle(spec) + 
