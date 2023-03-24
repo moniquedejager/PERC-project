@@ -53,32 +53,6 @@ royle_nichols_stats = function(i){
     df$z[df$max_interval_size == j] <- 
       estimate_interval_size(survey_effort, Ppresence, j)[2]
   }
-  p1 <- ggplot(df, aes(x=max_interval_size, y=z)) + 
-    geom_point() + 
-    xlab('Maximum interval size (days)') + 
-    ylab('Z-value')
-  
-  p2 <- ggplot(df, aes(x=max_interval_size, y=survey_effort)) + 
-    geom_point() + 
-    xlab('Maximum interval size (days)') + 
-    ylab('Survey effort (total # camera days)')
-  
-  p3 <- ggplot(df, aes(x=max_interval_size, y=Ppresence)) + 
-    geom_point() +
-    xlab('Maximum interval size (days)') + 
-    ylab('Proportion of cameras with detections')
-  
-  p4 <- ggplot(df, aes(x=max_interval_size, y=optimal_interval_size)) + 
-    geom_point() +
-    xlab('Maximum interval size (days)') + 
-    ylab('Optimal interval size (days)')
-  
-  windows(height=8, width=8)
-  plot <- ggarrange(p2, p3, p1, p4, labels=c('A', 'B', 'C', 'D'))
-  annotate_figure(plot, top=text_grob(spec, face='bold.italic'))
-  
-  optimal_interval_size <- df$optimal_interval_size[(df$survey_effort*df$z) == 
-                                                      max(df$survey_effort*df$z)]
   
   tiff(filename=paste('./results/figures/FSC and nonFSC/optimal interval size', spec, '.tiff'), 
        height=5, width=5, units='in', res=300)
