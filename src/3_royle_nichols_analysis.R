@@ -60,9 +60,11 @@ df2 = df[!is.infinite(df$logitPpres),]
 # and Ppresence (with dT transformed to fT (fraction of total study duration),
 # which is logit-transformed as this ranges between 0 and 1. Ppresence is also
 # logit transformed. 
+# survey effort should be positively log-linearly related to the z-value 
+
 y <- df2$z
 x1 <- df2$dT 
-x2 <- df2$StudyDuration * df2$nCams
+x2 <- 1/(df2$StudyDuration * df2$nCams)
 x3 <- df2$logitPpres
 
 mod0 <- lm(y~x1 + x2 + x3 + 
@@ -70,43 +72,23 @@ mod0 <- lm(y~x1 + x2 + x3 +
              x2:x3 +
              x1:x2:x3 + 
              
-             I(x1^2) + I(x2^2) + I(x3^2) + 
+             I(x1^2) + I(x3^2) + 
              I(x1^2):I(x2^2) + I(x1^2):I(x3^2) + 
              I(x2^2):I(x3^2) +
              I(x1^2):I(x2^2):I(x3^2) +  
              
-             I(x1^3) + I(x2^3) + I(x3^3) + 
+             I(x1^3) + I(x3^3) + 
              I(x1^3):I(x2^3) + I(x1^3):I(x3^3) + 
              I(x2^3):I(x3^3) + 
              I(x1^3):I(x2^3):I(x3^3) + 
              
-             I(x1^4) + I(x2^4) + I(x3^4) + 
+             I(x1^4) + I(x3^4) + 
              I(x1^4):I(x2^4) + I(x1^4):I(x3^4) + 
              I(x2^4):I(x3^4) + 
              I(x1^4):I(x2^4):I(x3^4))
 summary(mod0)
 
-mod1 <- lm(y~x1 + x2 + x3 + 
-             x1:x2 + x1:x3 +  
-             x2:x3 +
-             x1:x2:x3 + 
-             
-             I(x1^2) + I(x2^2) + I(x3^2) + 
-             I(x1^2):I(x3^2) + 
-             I(x2^2):I(x3^2) +
-             I(x1^2):I(x2^2):I(x3^2) +  
-             
-             I(x1^3) + I(x2^3) + I(x3^3) + 
-             I(x1^3):I(x2^3) + I(x1^3):I(x3^3) + 
-             I(x2^3):I(x3^3) + 
-             I(x1^3):I(x2^3):I(x3^3) + 
-             
-             I(x1^4) + I(x2^4) + I(x3^4) + 
-             I(x1^4):I(x2^4) + I(x1^4):I(x3^4) + 
-             I(x2^4):I(x3^4) + 
-             I(x1^4):I(x2^4):I(x3^4))
-summary(mod1)
-s = summary(mod1)
+s = summary(mod0)
 
 write.table(s$coefficients, 
             './results/output/simulations/to_estimate_z_values.txt', 

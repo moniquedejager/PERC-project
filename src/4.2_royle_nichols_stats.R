@@ -1,8 +1,9 @@
 # Calculate the royle-nichols stats per species, study duration, 
-# and time interval:
+# and time interval (dT = 5 of optimal time interval):
 
 royle_nichols_stats = function(i){
   library(unmarked)
+  source("./src/estimate_interval_size.R")
   
   # i is the species number:
   spec <- read.table('./data/processed/FSC and nonFSC data/species.txt')$V1[i]
@@ -13,6 +14,34 @@ royle_nichols_stats = function(i){
   cov <- read.table('./data/raw/FSC and nonFSC data/EffortPerCam.csv', sep=';', header=T)
   cov$Cluster <- factor(cov$Cluster)
   cov$Visibility = 3 - cov$Visibility
+  
+  # What is the survey effort per camera?
+  dets2 <- dets
+  dets2[dets2 == 0] <- 1
+  dets2[is.na(dets2)] <- 0
+  survey_effort_per_cam <- rowSums(dets2)
+  
+  # depending on the chosen maximum interval size,
+  # the number of cameras used in the analysis changes,
+  # and thus the survey effort and Ppresence change as well. 
+  # Thus, for a range of maximum interval sizes, 
+  # we can estimate the optimal interval size, and find out which 
+  # one we should use:
+  # start at a maximum time interval size that is half of the median
+  # survey effort per camera.
+  
+  max_interval_size <- floor(median(survey_effort_per_cam)/2)
+  dets3 <- dets[survey_effort_per_cam >= (max_interval_size*2),]
+  survey_effort <- length(dets3[!is.na(dets3)])
+  dets3[is.na(dets3)] <- 0
+  Ppresence <- sum(rowSums(dets3) > 0) / length(dets3[,1])
+  optimal_interval_size <- estimate_interval_size(survey_effort, Ppresence, max_interval_size)
+  
+  # survey_effort moet een positief lineair verband hebben met de z-waarde, 
+  # dit moet dus veranderd worden in het polynomial model waarmee we de 
+  # z-waarde berekenen! 
+  
+  
   
   # create the output file:
   x <- vector(length=0)

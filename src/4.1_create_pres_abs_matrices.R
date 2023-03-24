@@ -33,6 +33,7 @@ m <- m[m$Species != "unknown ",]
 genus <- gsub(' ','',m$Genus)
 species <- gsub(' ', '', m$Species)
 species <- paste(genus, species, sep=' ')
+m$species <- species
 n <- tapply(species, species, length)
 
 # write data to new input files, as summarized per species per camera per day:
@@ -42,7 +43,7 @@ write.table(uSpec, './data/processed/FSC and nonFSC data/species.txt',
             append=FALSE, row.names = FALSE, col.names = FALSE)
 for (spec in uSpec)
 {
-  m2 <- m[species == spec,]
+  m2 <- m[m$species == spec,]
   
   date1 <- as.Date(m2$Camera.Start.Date.New)
   date2 <- as.Date(m2$Photo.Date.New)
