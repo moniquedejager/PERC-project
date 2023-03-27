@@ -63,8 +63,8 @@ royle_nichols_stats = function(i){
   optimal_interval_size <- df$optimal_interval_size[(df$survey_effort*df$z) == 
                                                       max(df$survey_effort*df$z)]
   
-  tiff(filename=paste('./results/figures/FSC and nonFSC/optimal interval size', spec, '.tiff'), 
-       height=5, width=5, units='in', res=300)
+  #tiff(filename=paste('./results/figures/FSC and nonFSC/optimal interval size', spec, '.tiff'), 
+  #     height=5, width=5, units='in', res=300)
   coeff <- 1/3000
   ggplot(df, aes(x=max_interval_size, y=survey_effort*z)) + 
     geom_point(color=' darkgreen') + 
@@ -80,7 +80,7 @@ royle_nichols_stats = function(i){
           axis.title.y.left = element_text(color='darkgreen'),
           axis.title.y.right = element_text(color='darkblue')) + 
     geom_vline(xintercept=optimal_interval_size, linetype='dashed')
-  dev.off()
+  #dev.off()
   
   time_interval <- optimal_interval_size
   # create new dets-matrix with the right time intervals:
@@ -185,6 +185,8 @@ royle_nichols_stats = function(i){
   write.table(data2, outputfile, 
               append=TRUE, col.names = FALSE, row.names = FALSE)
 }
+
+royle_nichols_stats(1)
 
 i = 1:35 # there are 35 species that we want to analyse
 

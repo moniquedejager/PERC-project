@@ -1,4 +1,6 @@
 library(ggplot2)
+library(ggpattern)
+library(ggpubr)
 
 spec <- read.table('./data/processed/FSC and nonFSC data/species.txt')$V1
 
@@ -16,83 +18,58 @@ for (i in 2:length(spec)){
 df$cols = 0 + 1*(df$P < 0.05) + 1*((df$P < 0.05)&(df$z < 0))
 df$cols2 = factor(df$cols, labels = c("No significant effect", "More abundant in non-FSC forest", "More abundant in FSC forest"))
 
-windows(height=9, width=9)
-ggplot(df[df$p_presence > 0,], aes(x=study_duration, y=time_interval, color=factor(cols2))) + 
-  geom_point() + 
-  scale_y_continuous(trans='log10') + 
-  scale_x_continuous(trans='log10') +
-  facet_wrap(vars(species)) + 
-  scale_color_manual(values=c('grey70', 'indianred4', 'darkolivegreen4'), na.value='antiquewhite', name='') + 
-  xlab('Sampling period (days)') + 
-  ylab('Time interval size (days)')+
-  theme(legend.position = "top") + 
-  guides(colour = guide_legend(override.aes = list(size=10)))
+sel <- (df$type == 'optimal dT')
+df2 <- df[sel,]
+i <- order(df2$z)
+df2 <- df2[i, ]
+df2 <- rbind(df2, df[df$type == '5 day interval',])
+df2$species = factor(df2$species, levels = unique(df2$species)) 
 
-ggplot(df[df$p_presence > 0,], aes(x=study_duration, y=time_interval, color=p_presence)) + 
-  geom_point() + 
-  scale_y_continuous(trans='log10') + 
-  scale_x_continuous(trans='log10') +
-  facet_wrap(vars(species)) + 
-  scale_color_continuous(type='viridis', name='') + 
-  xlab('Sampling period (days)') + 
-  ylab('Time interval size (days)')+
-  theme(legend.position = "top") 
+windows(height=10, width=7)
+tiff(filename='./results/figures/FSC and nonFSC/z_per_species.tiff', 
+          height=10, width=7, units='in', res=300)
+ggplot(df2, aes(y=species, x=-1*z, pattern=type, fill=cols2)) + 
+  geom_bar_pattern(stat = 'identity', position='dodge',
+                   color = "black", 
+                   pattern_fill = "black",
+                   pattern_angle = 45,
+                   pattern_density = 0.1,
+                   pattern_spacing = 0.025,
+                   pattern_key_scale_factor = 0.6) + 
+  xlab('Z-value') + 
+  ylab('') + 
+  scale_fill_manual(values = c("grey", "indianred4", "darkolivegreen4")) + 
+  guides(pattern = guide_legend(override.aes = list(fill = "white"), title=''),
+         fill = guide_legend(override.aes = list(pattern = "none"), title=''))+
+  theme(axis.text.x = element_text(angle=90), 
+        legend.position = c(0.7, 0.9),
+        legend.background = element_blank())
+dev.off()
 
-df$cols3 = df$cols
-df$cols3[is.na(df$cols)] = 4
-df$cols3 = factor(df$cols3, labels = c("No significant effect", "More abundant in non-FSC forests", "More abundant in FSC forests", "NA"))
+p1 <- ggplot(df2[df2$type=='optimal dT',], aes(x=survey_effort, y=p_presence, 
+                                               color=time_interval)) + 
+  geom_point(size=3) + 
+  scale_color_continuous(type='viridis', name='Optimal time interval (days)') + 
+  ylab('Proportion of cameras with detections') + 
+  xlab('Sampling effort (total # camera days)') + 
+  theme(legend.position = c(0.25, 0.8),
+        legend.background = element_blank())
 
-m = tapply((df$cols3 == "More abundant in FSC forests"), df$species, sum)
-m = m - tapply((df$cols3 == "More abundant in non-FSC forests"), df$species, sum)
-i = order(m)
+p2 <- ggplot(df2[df2$type=='optimal dT',], 
+             aes(x=survey_effort, y=p_presence, color=cols2)) + 
+  geom_point(size=3) + 
+  scale_color_manual(values = c("grey", "indianred4", "darkolivegreen4"), 
+                     name='') + 
+  ylab('Proportion of cameras with detections') + 
+  xlab('Sampling effort (total # camera days)') + 
+  theme(legend.position = c(0.25, 0.9),
+        legend.background = element_blank())
 
-plot(m, tapply(df$p_presence, df$species, max))
-i = i[tapply(df$p_presence, df$species, max) > 0.1]
+windows(height=5, width=10)
+tiff(filename='./results/figures/FSC and nonFSC/time_interval_and_effect_per_survey_effort_and_p_presence.tiff', 
+     height=5, width=10, units='in', res=300)
+ggarrange(p1, p2 + rremove("ylab"), labels=c('A', 'B'))
+dev.off()
 
-df2 = df[df$species %in% sort(unique(df$species))[i],]
-df2$species = factor(df2$species, levels = sort(unique(df$species))[i]) 
-df2$cols3 = factor(df2$cols3, levels = c("More abundant in non-FSC forests", "No significant effect", "NA","More abundant in FSC forests"))
-
-windows(height=10, width=8)
-ggplot(df2, aes(y=species, fill=cols3)) + 
-  geom_bar() +
-  scale_fill_manual(values=c('indianred4', 'grey70', 'antiquewhite','darkolivegreen4'), name='') +
-  ylab('') +
-  theme(legend.position = "top")
-
-mod = lm(df$p_presence~df$species*df$time_interval*df$study_duration)
-summary(mod)
-
-windows(height=9, width=9)
-ggplot(df2[df2$p_presence > 0,], aes(x=study_duration, y=time_interval, color=factor(cols2))) + 
-  geom_point() + 
-  scale_y_continuous(trans='log10') + 
-  scale_x_continuous(trans='log10') +
-  facet_wrap(vars(species)) + 
-  scale_color_manual(values=c('grey70', 'indianred4', 'darkolivegreen4'), na.value='antiquewhite', name='') + 
-  xlab('Sampling period (days)') + 
-  ylab('Time interval size (days)')+
-  theme(legend.position = "top") + 
-  guides(colour = guide_legend(override.aes = list(size=10)))
-
-windows(height=9, width=9)
-ggplot(df2, aes(x=study_duration, y=time_interval, color=p_presence)) + 
-  geom_point() + 
-  scale_y_continuous(trans='log10') + 
-  scale_x_continuous(trans='log10') +
-  facet_wrap(vars(species)) + 
-  scale_color_continuous(type='viridis', name='') + 
-  xlab('Sampling period (days)') + 
-  ylab('Time interval size (days)')+
-  theme(legend.position = "top") 
-
-windows(height=9, width=9)
-ggplot(df2, aes(x=study_duration, y=time_interval, color=n_cams)) + 
-  geom_point() + 
-  scale_y_continuous(trans='log10') + 
-  scale_x_continuous(trans='log10') +
-  facet_wrap(vars(species)) + 
-  scale_color_continuous(type='viridis', name='') + 
-  xlab('Sampling period (days)') + 
-  ylab('Time interval size (days)')+
-  theme(legend.position = "top") 
+# create a table with all useful information per species:
+write.csv(df2, 'results/tables/FSC and nonFSC/results_per_species.csv')
