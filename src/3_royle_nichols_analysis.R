@@ -14,27 +14,6 @@ df$cols2 <- factor(df$cols, labels = c("No significant effect",
                                        "Incorrect result"))
 df$sim_nr <- 1
 
-sel <- (df$nCams == 25)&(df$sim_nr == 1)
-windows(height=10, width=10)
-ggplot(df[sel,], aes(x=StudyDuration, y=dT, color=factor(cols2))) + 
-  geom_point() + 
-  scale_y_continuous(trans='log10') + 
-  scale_x_continuous(trans='log10') +
-  facet_wrap(vars(Ppres)) + 
-  scale_color_manual(values=c('grey70', 'darkolivegreen4','indianred4'), 
-                     na.value='antiquewhite', name='') + 
-  xlab('Sampling period (days)') + 
-  ylab('Time interval size (days)')+
-  theme(legend.position = "top") + 
-  guides(colour = guide_legend(override.aes = list(size=10)))
-
-sel <- (df$nCams == 5)&(df$StudyDuration == 365)&(df$dT == 1)
-ggplot(df[sel,], aes(x=dens1, y=dens2, color=P)) +
-  geom_point() + 
-  scale_y_continuous(trans='log10') + 
-  scale_x_continuous(trans='log10') +
-  scale_color_continuous(type='viridis', trans='log10')
-
 for (i in 2:10){
   df2 <- read.table(paste(
     './results/output/simulations/RoyleNicholsStats20230307', i, '.txt'), 
@@ -95,6 +74,172 @@ write.table(s$coefficients,
             './results/output/simulations/to_estimate_z_values.txt', 
             append=FALSE, row.names = FALSE, col.names=TRUE)
 
+# what is the best time interval size (with the highest z-score) per study duration, proportion of cameras with detections, and number of cameras?
+df2$Ppres = ceiling(df2$Ppresence*20)/20
+group = paste(df2$original_SD, df2$nCams, df2$Ppres, df2$sim_nr, sep='-')
+df3 = df2[is.na(df2$dT),]
+for (i in unique(group)) {
+  df4 <- df2[group == i,]
+  df4 <- df4[!is.na(df4$z),]
+  df4 <- df4[(df4$z == max(df4$z)),]
+  df3 <- rbind(df3,df4)
+}
+write.table(df3, './results/output/simulations/highest_z_values.txt', append=FALSE, col.names=TRUE, row.names = FALSE)
+
+df3 <- read.table('./results/output/simulations/highest_z_values.txt', header=TRUE)
+
+y <- df3$z
+x1 <- 1/(df3$StudyDuration*df3$nCams*2)
+x2 <- df3$logitPpres
+
+mod <- lm(y~x1)
+summary(mod)
+mod1 <- lm(y~x1+x2)
+summary(mod1)
+mod2 <- lm(y~x1*x2 + I(x2^2)*x1 + I(x2^3)*x1 + I(x2^4))
+summary(mod2)
+mod3 <- lm(y~x1*x2 + I(x2^2)*x1 + I(x2^3)*x1 + I(x2^4)*x1)
+summary(mod3)
+anova(mod2, mod3)
+# R2 = 0.76
+
+df3$sampling_effort <- df3$StudyDuration * df3$nCams * 2
+df3$est_z <- mod3$fitted.values
+
+sel = (df3$est_z > 1.96)
+labs = c(50, 150, 400, 1000, 3000, 10000)
+p1 <- ggplot(df3[sel,], aes(x=round(log(sampling_effort), 1), y=Ppres, fill=est_z)) +
+  geom_raster() + 
+  ylim(0,1) + 
+  scale_x_continuous(breaks = log(labs), labels=labs, limits=c(4,10)) +
+  scale_fill_continuous(type='viridis', name='Estimated z-value') + 
+  xlab('Sampling effort (total # camera days)') + 
+  ylab(expression(paste('Proportion of cameras with detections (', P[presence], ')')))+
+  theme(legend.position = "top") 
+
+y <- df3$dT
+mod <- glm(y~x1, family='poisson')
+summary(mod)
+mod1 <- glm(y~x1+x2, family='poisson')
+summary(mod1)
+mod2 <- glm(y~x1*x2 + I(x2^2)*x1 + I(x2^3)*x1 + I(x2^4), family='poisson')
+summary(mod2)
+mod3 <- glm(y~x1*x2 + I(x2^2)*x1 + I(x2^3)*x1 + I(x2^4)*x1, family='poisson')
+summary(mod3)
+s = summary(mod3)
+
+with(summary(mod3), 1 - deviance/null.deviance)
+# R2 = 0.22
+
+df3$est_dT = ceiling(mod3$fitted.values)
+
+p2 <- ggplot(df3[sel,], aes(x=round(log(sampling_effort), 1), y=Ppres, fill=est_dT)) +
+  geom_raster() + 
+  ylim(0, 1) + 
+  scale_x_continuous(breaks = log(labs), labels=labs, limits=c(4, 10)) +
+  scale_fill_continuous(type='viridis', trans='log10', name='Optimal interval size (days)') + 
+  xlab('Sampling effort (total # camera days)') + 
+  ylab('')+
+  theme(legend.position = "top") 
+
+# what is the difference between dT = 5 and optimal time interval? 
+df4 <- df[df$dT == 5,]
+# per combination of survey effort and Ppresence, we calculate the 
+# percentage of RN models that resulted in a significant and correct
+# answer: 
+
+df4$sampling_effort <- df4$StudyDuration * df4$nCams * 2
+df4$samp_eff2 <- round(log(df4$sampling_effort), 1)
+df4$Ppres <- ceiling(df4$Ppresence*20)/20
+df4$z[is.na(df4$z)] <- 0
+
+group <- paste(df4$samp_eff2, df4$Ppres, sep='-')
+n_tot <- tapply(df4$z, group, length)
+n_correct <- tapply(df4$z > 1.96, group, sum)
+p_correct <- n_correct/n_tot *100
+sampling_effort <- tapply(df4$samp_eff2, group, mean)
+Ppresence <- tapply(df4$Ppres, group, mean)
+df5 <- data.frame(p_correct = p_correct,
+                  sampling_effort = sampling_effort,
+                  Ppresence = Ppresence)
+
+df3$samp_eff2 <- round(log(df3$sampling_effort), 1)
+df3$z[is.na(df3$z)] <- 0
+
+group <- paste(df3$samp_eff2, df3$Ppres, sep='-')
+n_tot <- tapply(df3$z, group, length)
+n_correct <- tapply(df3$z > 1.96, group, sum)
+p_correct <- n_correct/n_tot *100
+sampling_effort <- tapply(df3$samp_eff2, group, mean)
+Ppresence <- tapply(df3$Ppres, group, mean)
+df6 <- data.frame(p_correct = p_correct,
+                  sampling_effort = sampling_effort,
+                  Ppresence = Ppresence)
+
+df5$type <- 'Using 5 day interval'
+df6$type <- 'Using optimal interval size'
+df7 <- rbind(df5, df6)
+
+# for each value in df2, find the corresponding value
+# in df4 and calculate the difference:
+group1 <- paste(df5$sampling_effort, df5$Ppresence, sep='-')
+group2 <- paste(df6$sampling_effort, df6$Ppresence, sep='-')
+
+for (i in unique(group1)){
+  p1 <- df5$p_correct[group1 == i]
+  p2 <- df6$p_correct[group2 == i]
+  if (length(p2) == 0){
+    p2 <- 0
+    x <- data.frame(p_correct =0,
+                    sampling_effort = df5$sampling_effort[group1 == i],
+                    Ppresence = df5$Ppresence[group1 == i],
+                    type = 'Using optimal interval size')
+    df7 <- rbind(df7, x)
+  } 
+  performance <- p2 / (p1 + p2)
+  if (is.na(performance)) { performance <- 0.5}
+  if (performance < 0.5) { performance <- 0.5}
+  x <- data.frame(p_correct = performance,
+                  sampling_effort = df5$sampling_effort[group1 == i],
+                  Ppresence = df5$Ppresence[group1 == i],
+                  type = 'Difference')
+  df7 <- rbind(df7, x)
+
+}
+
+sel <- df7$type == 'Difference'
+p3 <- ggplot(df7[sel,], aes(x=sampling_effort, y=Ppresence, fill=p_correct)) +
+  geom_raster() + 
+  ylim(0,1)+
+  scale_x_continuous(breaks = log(labs), labels=labs, limits=c(4, 10)) +
+  scale_fill_continuous(type='viridis', name='Relative performance') + 
+  xlab('Sampling effort (total # camera days)') + 
+  ylab(expression(
+    paste('Proportion of cameras with detections (', P[presence], ')'))) +
+  theme(legend.position = "top") 
+
+windows(height=5, width=12)
+tiff(filename='./results/figures/simulations/estimated_z_values_optimal_interval_sizes_and_relative_performance.tiff', 
+     height=5, width=12, units='in', res=300)
+ggarrange(p1, p2 + rremove("ylab"), p3 + rremove("ylab"), 
+          labels=c('A', 'B', 'C'), nrow=1)
+dev.off()
+
+sel <- df7$type != 'Difference'
+p4 <- ggplot(df7[sel,], aes(x=sampling_effort, y=Ppresence, fill=p_correct)) +
+  geom_raster() + 
+  scale_x_continuous(breaks = log(labs), labels=labs) +
+  scale_fill_continuous(type='viridis', name='% correct') + 
+  xlab('Sampling effort (total # camera days)') + 
+  ylab(expression(
+    paste('Proportion of cameras with detections (', P[presence], ')'))) +
+  facet_wrap(vars(type))
+windows(height=5, width=9)
+tiff(filename='./results/figures/simulations/p_correct.tiff', 
+     height=5, width=9, units='in', res=300)
+p4
+dev.off()
+
 
 # finding the good, the bad, and the ugly: 
 # how often do combinations of study duration, time interval size, 
@@ -146,232 +291,3 @@ summary(mod)
 
 mod = lm(nCorrect~SD2+dT2+dens1+dens2+nCams ,data=df5)
 summary(mod)
-
-# what is the best time interval size (with the highest z-score) per study duration, proportion of cameras with detections, and number of cameras?
-df2$Ppres = ceiling(df2$Ppresence*20)/20
-group = paste(df2$original_SD, df2$nCams, df2$Ppres, df2$sim_nr, sep='-')
-df3 = df2[is.na(df2$dT),]
-for (i in unique(group)) {
-  df4 <- df2[group == i,]
-  df4 <- df4[!is.na(df4$z),]
-  df4 <- df4[(df4$z == max(df4$z)),]
-  df3 <- rbind(df3,df4)
-}
-write.table(df3, './results/output/simulations/highest_z_values.txt', append=FALSE, col.names=TRUE, row.names = FALSE)
-
-df3 <- read.table('./results/output/simulations/highest_z_values.txt', header=TRUE)
-
-windows(height=12, width=4)
-sel <- (df3$nCams == 25) & (df3$sim_nr %in% c(1, 2, 3, 4, 5))
-ggplot(df3[sel,], aes(x=original_SD, y=Ppres, fill=P)) +
-  geom_raster() + 
-  scale_x_continuous(trans='log10') +
-  facet_wrap(vars(sim_nr), ncol=1) + 
-  scale_fill_continuous(type='viridis', trans='log10') + 
-  xlab('Sampling period (days)') + 
-  ylab('Ppresence')+
-  theme(legend.position = "top") 
-
-ggplot(df3[sel,], aes(x=original_SD, y=Ppres, fill=z)) +
-  geom_raster() + 
-  scale_x_continuous(trans='log10') +
-  facet_wrap(vars(sim_nr), ncol=1) + 
-  scale_fill_continuous(type='viridis') + 
-  xlab('Sampling period (days)') + 
-  ylab('Ppresence')+
-  theme(legend.position = "top") 
-
-ggplot(df3[sel,], aes(x=original_SD, y=Ppres, fill=dT)) +
-  geom_raster() + 
-  #scale_y_continuous(trans='log10') + 
-  scale_x_continuous(trans='log10') +
-  facet_wrap(vars(sim_nr), ncol=1) + 
-  scale_fill_continuous(type='viridis', trans='log10') + 
-  xlab('Sampling period (days)') + 
-  ylab('Ppresence')+
-  theme(legend.position = "top") 
-
-# with study duration and camera numbers combined:
-y <- df3$z
-x1 <- 1/(df3$StudyDuration*df3$nCams*2)
-x2 <- df3$logitPpres
-
-mod <- lm(y~x1)
-summary(mod)
-mod1 <- lm(y~x1+x2)
-summary(mod1)
-mod2 <- lm(y~x1*x2 + I(x2^2)*x1 + I(x2^3)*x1 + I(x2^4))
-summary(mod2)
-mod3 <- lm(y~x1*x2 + I(x2^2)*x1 + I(x2^3)*x1 + I(x2^4)*x1)
-summary(mod3)
-anova(mod2, mod3)
-
-# R2 = 0.76
-
-df3$sampling_effort <- df3$StudyDuration * df3$nCams * 2
-df3$est_z <- mod3$fitted.values
-
-sel = (df3$est_z > 1.96)
-#sel = !is.na(df3$z)
-
-labs = c(50, 150, 400, 1000, 3000, 10000)
-p1 <- ggplot(df3[sel,], aes(x=round(log(sampling_effort), 1), y=Ppres, fill=est_z)) +
-  geom_raster() + 
-  ylim(0,1) + 
-  scale_x_continuous(breaks = log(labs), labels=labs, limits=c(4,10)) +
-  scale_fill_continuous(type='viridis', name='Estimated z-value') + 
-  xlab('Sampling effort (total # camera days)') + 
-  ylab(expression(paste('Proportion of cameras with detections (', P[presence], ')')))+
-  theme(legend.position = "top") 
-
-y <- df3$dT
-
-mod <- glm(y~x1, family='poisson')
-summary(mod)
-mod1 <- glm(y~x1+x2, family='poisson')
-summary(mod1)
-mod2 <- glm(y~x1*x2 + I(x2^2)*x1 + I(x2^3)*x1 + I(x2^4), family='poisson')
-summary(mod2)
-mod3 <- glm(y~x1*x2 + I(x2^2)*x1 + I(x2^3)*x1 + I(x2^4)*x1, family='poisson')
-summary(mod3)
-
-s = summary(mod3)
-
-with(summary(mod3), 1 - deviance/null.deviance)
-# R2 = 0.22
-
-df3$est_dT = ceiling(mod3$fitted.values)
-
-p2 <- ggplot(df3[sel,], aes(x=round(log(sampling_effort), 1), y=Ppres, fill=est_dT)) +
-  geom_raster() + 
-  ylim(0, 1) + 
-  scale_x_continuous(breaks = log(labs), labels=labs, limits=c(4, 10)) +
-  scale_fill_continuous(type='viridis', trans='log10', name='Optimal interval size (days)') + 
-  xlab('Sampling effort (total # camera days)') + 
-  ylab('')+
-  theme(legend.position = "top") 
-
-ggarrange(p1, p2 + rremove("ylab"), labels=c('A', 'B'))
-
-# what is the difference between dT = 5 and optimal time interval? 
-df4 <- df[df$dT == 5,]
-# per combination of survey effort and Ppresence, we calculate the 
-# percentage of RN models that resulted in a significant and correct
-# answer: 
-
-df4$sampling_effort <- df4$StudyDuration * df4$nCams * 2
-df4$samp_eff2 <- round(log(df4$sampling_effort), 1)
-df4$Ppres <- ceiling(df4$Ppresence*20)/20
-df4$z[is.na(df4$z)] <- 0
-
-group <- paste(df4$samp_eff2, df4$Ppres, sep='-')
-n_tot <- tapply(df4$z, group, length)
-n_correct <- tapply(df4$z > 1.96, group, sum)
-p_correct <- n_correct/n_tot *100
-sampling_effort <- tapply(df4$samp_eff2, group, mean)
-Ppresence <- tapply(df4$Ppres, group, mean)
-df5 <- data.frame(p_correct = p_correct,
-                  sampling_effort = sampling_effort,
-                  Ppresence = Ppresence)
-
-labs <- c(50, 150, 400, 1000, 3000, 10000)
-
-p4 <- ggplot(df5, aes(x=sampling_effort, y=Ppresence, fill=p_correct)) +
-  geom_raster() + 
-  scale_x_continuous(breaks = log(labs), labels=labs) +
-  scale_fill_continuous(type='viridis', name='% correct') + 
-  xlab('Sampling effort (total # camera days)') + 
-  ylab(expression(
-    paste('Proportion of cameras with detections (', P[presence], ')'))) +
-  theme(legend.position = "top") 
-
-df3$samp_eff2 <- round(log(df3$sampling_effort), 1)
-df3$z[is.na(df3$z)] <- 0
-
-group <- paste(df3$samp_eff2, df3$Ppres, sep='-')
-n_tot <- tapply(df3$z, group, length)
-n_correct <- tapply(df3$z > 1.96, group, sum)
-p_correct <- n_correct/n_tot *100
-sampling_effort <- tapply(df3$samp_eff2, group, mean)
-Ppresence <- tapply(df3$Ppres, group, mean)
-df6 <- data.frame(p_correct = p_correct,
-                  sampling_effort = sampling_effort,
-                  Ppresence = Ppresence)
-
-p5 <- ggplot(df6, aes(x=sampling_effort, y=Ppresence, fill=p_correct)) +
-  geom_raster() + 
-  scale_x_continuous(breaks = log(labs), labels=labs) +
-  scale_fill_continuous(type='viridis', name='% correct') + 
-  xlab('Sampling effort (total # camera days)') + 
-  ylab(expression(
-    paste('Proportion of cameras with detections (', P[presence], ')'))) +
-  theme(legend.position = "top") 
-
-df5$type <- 'Using 5 day interval'
-df6$type <- 'Using optimal interval size'
-df7 <- rbind(df5, df6)
-
-p6 <- ggplot(df7, aes(x=sampling_effort, y=Ppresence, fill=p_correct)) +
-  geom_raster() + 
-  scale_x_continuous(breaks = log(labs), labels=labs) +
-  scale_fill_continuous(type='viridis', name='% correct') + 
-  xlab('Sampling effort (total # camera days)') + 
-  ylab(expression(
-    paste('Proportion of cameras with detections (', P[presence], ')'))) +
-  facet_wrap(vars(type))
-
-# for each value in df2, find the corresponding value
-# in df4 and calculate the difference:
-group1 <- paste(df5$sampling_effort, df5$Ppresence, sep='-')
-group2 <- paste(df6$sampling_effort, df6$Ppresence, sep='-')
-
-for (i in unique(group1)){
-  p1 <- df5$p_correct[group1 == i]
-  p2 <- df6$p_correct[group2 == i]
-  if (length(p2) == 0){
-    p2 <- 0
-    x <- data.frame(p_correct =0,
-                    sampling_effort = df5$sampling_effort[group1 == i],
-                    Ppresence = df5$Ppresence[group1 == i],
-                    type = 'Using optimal interval size')
-    df7 <- rbind(df7, x)
-  } 
-  performance <- p2 / (p1 + p2)
-  if (is.na(performance)) { performance <- 0.5}
-  if (performance < 0.5) { performance <- 0.5}
-  x <- data.frame(p_correct = performance,
-                  sampling_effort = df5$sampling_effort[group1 == i],
-                  Ppresence = df5$Ppresence[group1 == i],
-                  type = 'Difference')
-  df7 <- rbind(df7, x)
-
-}
-
-sel <- df7$type != 'Difference'
-p7 <- ggplot(df7[sel,], aes(x=sampling_effort, y=Ppresence, fill=p_correct)) +
-  geom_raster() + 
-  scale_x_continuous(breaks = log(labs), labels=labs) +
-  scale_fill_continuous(type='viridis', name='% correct') + 
-  xlab('Sampling effort (total # camera days)') + 
-  ylab(expression(
-    paste('Proportion of cameras with detections (', P[presence], ')'))) +
-  facet_wrap(vars(type))
-
-sel <- df7$type == 'Difference'
-p3 <- ggplot(df7[sel,], aes(x=sampling_effort, y=Ppresence, fill=p_correct)) +
-  geom_raster() + 
-  ylim(0,1)+
-  scale_x_continuous(breaks = log(labs), labels=labs, limits=c(4, 10)) +
-  scale_fill_continuous(type='viridis', name='Relative performance') + 
-  xlab('Sampling effort (total # camera days)') + 
-  ylab(expression(
-    paste('Proportion of cameras with detections (', P[presence], ')'))) +
-  theme(legend.position = "top") 
-
-windows(height=5, width=12)
-tiff(filename='./results/figures/simulations/estimated_z_values_optimal_interval_sizes_and_relative_performance.tiff', 
-     height=5, width=12, units='in', res=300)
-ggarrange(p1, p2 + rremove("ylab"), p3 + rremove("ylab"), 
-          labels=c('A', 'B', 'C'), nrow=1)
-dev.off()
-
