@@ -47,40 +47,57 @@ royle_nichols_stats = function(i){
     dets3[is.na(dets3)] <- 0
     Ppresence <- sum(rowSums(dets3) > 0) / length(dets3[,1])
     df$Ppresence[df$max_interval_size == j] <- Ppresence
+    n_cams <- length(dets3[,1])
       
     if ((Ppresence == 0)|(Ppresence == 1)){
       df$optimal_interval_size[df$max_interval_size == j] <- NA
       df$z[df$max_interval_size == j] <- NA
     }else{
       df$optimal_interval_size[df$max_interval_size == j] <- 
-        estimate_interval_size(survey_effort, Ppresence, j)[1]
+        estimate_interval_size(survey_effort, Ppresence, j, n_cams)[1]
       df$z[df$max_interval_size == j] <- 
-        estimate_interval_size(survey_effort, Ppresence, j)[2]
+        estimate_interval_size(survey_effort, Ppresence, j, n_cams)[2]
     }
   }
   
   df <- df[!is.na(df$optimal_interval_size),]
   optimal_interval_size <- df$optimal_interval_size[(df$survey_effort*df$z) == 
                                                       max(df$survey_effort*df$z)]
-  
-  #tiff(filename=paste('./results/figures/FSC and nonFSC/optimal interval size', spec, '.tiff'), 
-  #     height=5, width=5, units='in', res=300)
-  coeff <- 1/3000
-  ggplot(df, aes(x=max_interval_size, y=survey_effort*z)) + 
+  coeff <- 1/4
+  p1 <- ggplot(df, aes(x=max_interval_size, y=survey_effort/10000)) + 
     geom_point(color=' darkgreen') + 
     geom_line(color=' darkgreen') + 
-    geom_point(aes(x=max_interval_size, y=optimal_interval_size*3000), color=' darkblue') + 
-    geom_line(aes(x=max_interval_size, y=optimal_interval_size*3000), color=' darkblue') + 
     xlab('Maximum interval size (days)') + 
-    ylab('Survey effort (days) x z-value') +
+    ylab('Survey effort (10,000 days) ') +
     ggtitle(spec) + 
+    geom_point(aes(x=max_interval_size, y=Ppresence/coeff), color=' darkblue') + 
+    geom_line(aes(x=max_interval_size, y=Ppresence/coeff), color=' darkblue') +
     scale_y_continuous(sec.axis = 
-                         sec_axis(~.*coeff, name="Optimal interval size (days)")) +
+                         sec_axis(~.*coeff, name="Proportion of cameras with detections")) +
+    theme(plot.title = element_text(face='bold.italic'),
+          axis.title.y.left = element_text(color='darkgreen'),
+          axis.title.y.right = element_text(color='darkblue')) +
+    geom_vline(xintercept=df$max_interval_size[df$z == max(df$z)], linetype='dashed')
+  
+  coeff2 <- 5
+  p2 <- ggplot(df, aes(x=max_interval_size, y=z)) + 
+    geom_point(color=' darkgreen') + 
+    geom_line(color=' darkgreen') +
+    xlab('Maximum interval size (days)') + 
+    ylab('z-value') +
+    geom_point(aes(x=max_interval_size, y=optimal_interval_size/coeff2), color=' darkblue') + 
+    geom_line(aes(x=max_interval_size, y=optimal_interval_size/coeff2), color=' darkblue') +
+    scale_y_continuous(sec.axis = 
+                         sec_axis(~.*coeff2, name="Optimal interval size (days)")) +
     theme(plot.title = element_text(face='bold.italic'),
           axis.title.y.left = element_text(color='darkgreen'),
           axis.title.y.right = element_text(color='darkblue')) + 
-    geom_vline(xintercept=optimal_interval_size, linetype='dashed')
-  #dev.off()
+    geom_vline(xintercept=df$max_interval_size[df$z == max(df$z)], linetype='dashed')
+  
+  tiff(filename=paste('./results/figures/FSC and nonFSC/optimal interval size', spec, '.tiff'), 
+       height=5, width=5, units='in', res=300)
+  plot(ggarrange(p1 + rremove("xlab"), p2, labels=c('A', 'B'), nrow = 2))
+  dev.off()
   
   time_interval <- optimal_interval_size
   # create new dets-matrix with the right time intervals:
