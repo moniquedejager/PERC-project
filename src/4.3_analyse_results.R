@@ -49,6 +49,8 @@ dev.off()
 p1 <- ggplot(df2[df2$type=='optimal dT',], aes(x=survey_effort, y=p_presence, 
                                                color=time_interval)) + 
   geom_point(size=3) + 
+  xlim(0, 40000) + 
+  ylim(0, 1) + 
   scale_color_continuous(type='viridis', name='Optimal time interval (days)') + 
   ylab('Proportion of cameras with detections') + 
   xlab('Sampling effort (total # camera days)') + 
@@ -58,6 +60,8 @@ p1 <- ggplot(df2[df2$type=='optimal dT',], aes(x=survey_effort, y=p_presence,
 p2 <- ggplot(df2[df2$type=='optimal dT',], 
              aes(x=survey_effort, y=p_presence, color=cols2)) + 
   geom_point(size=3) + 
+  xlim(0, 40000) + 
+  ylim(0, 1) + 
   scale_color_manual(values = c("grey", "indianred4", "darkolivegreen4"), 
                      name='') + 
   ylab('Proportion of cameras with detections') + 
@@ -71,5 +75,21 @@ tiff(filename='./results/figures/FSC and nonFSC/time_interval_and_effect_per_sur
 ggarrange(p1, p2 + rremove("ylab"), labels=c('A', 'B'))
 dev.off()
 
+sel <- (df$type == 'optimal dT')
+df2 <- df[sel,]
+
+windows(height=5, width=5)
+tiff(filename='./results/figures/FSC and nonFSC/Ppresence_per_optimal_interval_size_and_no_intervals.tiff', 
+     height=5, width=5, units='in', res=300)
+ggplot(df2, aes(x=time_interval, y=min_number_of_intervals, color=p_presence)) + 
+  geom_point(size=3) + 
+  scale_color_continuous(type='viridis', name='Proportion of cameras with detections',
+                         limits = c(0, 1)) +
+  xlab('Optimal interval size (days)') + 
+  ylab('Minimum number of intervals') + 
+  scale_y_continuous(trans='log10') + 
+  theme(legend.position = "top") 
+dev.off()
+
 # create a table with all useful information per species:
-write.csv(df2, 'results/tables/FSC and nonFSC/results_per_species.csv')
+write.csv(df, 'results/tables/FSC and nonFSC/results_per_species.csv')

@@ -1,14 +1,65 @@
-estimate_interval_size <- function(sampling_effort, Ppresence, max_interval_size, n_cams){
+estimate_interval_size <- function(pres_abs_matrix){
   # this function estimates the interval size that should be used 
-  # in the Royle-Nichols occupancy model, given 
+  # in the Royle-Nichols occupancy model, given
+  # 1. the presence/absence matrix
+  # 2. the minimum acceptable number of intervals
+  library(ggplot2)
+  library(ggpubr)
+  
+  # What is the survey effort per camera?
+  dets <- pres_abs_matrix
+  dets2 <- pres_abs_matrix
+  dets2[dets2 == 0] <- 1
+  dets2[is.na(dets2)] <- 0
+  survey_effort_per_cam <- rowSums(dets2)
+  
+  # depending on the chosen maximum interval size,
+  # the number of cameras used in the analysis changes,
+  # and thus the survey effort and Ppresence change as well. 
+  # Thus, for a range of interval sizes, 
+  # we can estimate the z-value, and find out which 
+  # one we should use. 
+  
+  x <- vector(length=0)
+  df <- data.frame(survey_effort = x,
+                   Ppresence = x,
+                   interval_size = x,
+                   n_cams = x,
+                   min_number_of_intervals = x,
+                   z = x)
+  
+  for (min_number_of_intervals in 2:30){
+    max_interval_size <- 
+      quantile(survey_effort_per_cam, 0.95)/min_number_of_intervals
+    
+    for (j in 1:max_interval_size){
+      dets3 <- dets[survey_effort_per_cam >= (j*min_number_of_intervals),]
+      survey_effort <- length(dets3[!is.na(dets3)])
+      dets3[is.na(dets3)] <- 0
+      Ppresence <- sum(rowSums(dets3) > 0) / length(dets3[,1])
+      n_cams <- length(dets3[,1])
+      
+      df2 <- data.frame(survey_effort = survey_effort,
+                       Ppresence = Ppresence,
+                       interval_size = j,
+                       n_cams = n_cams,
+                       min_number_of_intervals = min_number_of_intervals,
+                       z = NA)
+      df <- rbind(df, df2)
+    }
+  }
+  
+  df$Ppresence[df$Ppresence == 1] <- 0.999
+  df <- df[df$Ppresence > 0,]
+  
   # 1. the sampling effort (= total camera days)
   # 2. the proportion of cameras with detections of the species
   # 3. the maximum interval size that can be used
   
-  x1 <- 1:max_interval_size 
-  x2 <- 1/sampling_effort
-  x3 <- log(Ppresence/(1 - Ppresence))
-  x4 <- 1/n_cams
+  x1 <- df$interval_size 
+  x2 <- 1/df$survey_effort
+  x3 <- log(df$Ppresence/(1 - df$Ppresence))
+  x4 <- 1/df$n_cams
   
   b <- read.table(
     './results/output/simulations/to_estimate_z_values.txt', 
@@ -64,11 +115,48 @@ estimate_interval_size <- function(sampling_effort, Ppresence, max_interval_size
     x2*x4*x1^2*x3^2*b[39] + 
     x2*x4*x1^3*x3^3*b[40]
     
-  plot(x1, z)
-  dT <- x1[z == max(z)]
-  maxz <- max(z)
+  df$z <- z
+  dT <- df$interval_size[df$z == max(df$z)]
+  nT <- df$min_number_of_intervals[df$z == max(df$z)]
+  df$min_number_of_intervals <- factor(df$min_number_of_intervals)
   
-  return(c(dT, maxz))
+  p1 <- ggplot(df, aes(x=interval_size, y=survey_effort/1000, color=min_number_of_intervals)) +
+    geom_point() + 
+    geom_line() +
+    scale_x_continuous(trans='log10') +
+    xlab('Interval size (days)') + 
+    ylab('Sampling effort (1,000 camera days)') +
+    geom_vline(xintercept=dT, linetype='dashed')
+  
+  p2 <- ggplot(df, aes(x=interval_size, y=n_cams, color=min_number_of_intervals)) +
+    geom_point() + 
+    geom_line() +
+    scale_x_continuous(trans='log10') +
+    xlab('Interval size (days)') + 
+    ylab('# Cameras') +
+    geom_vline(xintercept=dT, linetype='dashed')
+  
+  p3 <- ggplot(df, aes(x=interval_size, y=Ppresence, color=min_number_of_intervals)) +
+    geom_point() + 
+    geom_line() +
+    scale_x_continuous(trans='log10') +
+    xlab('Interval size (days)') + 
+    ylab('Proportion of cameras with detections') +
+    geom_vline(xintercept=dT, linetype='dashed')
+  
+  p4 <- ggplot(df, aes(x=interval_size, y=z, color=min_number_of_intervals)) +
+    geom_point() + 
+    geom_line() +
+    scale_x_continuous(trans='log10') +
+    xlab('Interval size (days)') + 
+    ylab('z-value') +
+    geom_vline(xintercept=dT, linetype='dashed')
+  
+  print(ggarrange(p1, p2, p3, p4, nrow=2, ncol=2, 
+                  labels=c('A', 'B', 'C', 'D'), 
+                  common.legend = TRUE, legend="bottom"))
+  
+  return(c(dT, nT))
 }
 
 

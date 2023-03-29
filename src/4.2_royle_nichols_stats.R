@@ -15,7 +15,11 @@ royle_nichols_stats = function(i){
   dets <- as.matrix(read.table(filename))
   cov <- read.table('./data/raw/FSC and nonFSC data/EffortPerCam.csv', sep=';', header=T)
   cov$Cluster <- factor(cov$Cluster)
-  cov$Visibility = 3 - cov$Visibility
+  cov$Visibility <- 3 - cov$Visibility
+  
+  x <- estimate_interval_size(dets)
+  time_interval <- x[1]
+  nT <- x[2]
   
   # What is the survey effort per camera?
   dets2 <- dets
@@ -23,104 +27,27 @@ royle_nichols_stats = function(i){
   dets2[is.na(dets2)] <- 0
   survey_effort_per_cam <- rowSums(dets2)
   
-  # depending on the chosen maximum interval size,
-  # the number of cameras used in the analysis changes,
-  # and thus the survey effort and Ppresence change as well. 
-  # Thus, for a range of maximum interval sizes, 
-  # we can estimate the optimal interval size, and find out which 
-  # one we should use:
-  # start at a maximum time interval size that is half of the median
-  # survey effort per camera.
-  
-  df <- data.frame(max_interval_size = 
-                     round(quantile(survey_effort_per_cam, 0.05)/2):
-                     round(quantile(survey_effort_per_cam, 0.75)/2),
-                   survey_effort = 0,
-                   Ppresence = 0,
-                   optimal_interval_size = 0,
-                   z = 0)
-  
-  for (j in df$max_interval_size){
-    dets3 <- dets[survey_effort_per_cam >= (j*2),]
-    survey_effort <- length(dets3[!is.na(dets3)])
-    df$survey_effort[df$max_interval_size == j] <- survey_effort
-    dets3[is.na(dets3)] <- 0
-    Ppresence <- sum(rowSums(dets3) > 0) / length(dets3[,1])
-    df$Ppresence[df$max_interval_size == j] <- Ppresence
-    n_cams <- length(dets3[,1])
-      
-    if ((Ppresence == 0)|(Ppresence == 1)){
-      df$optimal_interval_size[df$max_interval_size == j] <- NA
-      df$z[df$max_interval_size == j] <- NA
-    }else{
-      df$optimal_interval_size[df$max_interval_size == j] <- 
-        estimate_interval_size(survey_effort, Ppresence, j, n_cams)[1]
-      df$z[df$max_interval_size == j] <- 
-        estimate_interval_size(survey_effort, Ppresence, j, n_cams)[2]
-    }
-  }
-  
-  df <- df[!is.na(df$optimal_interval_size),]
-  optimal_interval_size <- df$optimal_interval_size[(df$survey_effort*df$z) == 
-                                                      max(df$survey_effort*df$z)]
-  coeff <- 1/4
-  p1 <- ggplot(df, aes(x=max_interval_size, y=survey_effort/10000)) + 
-    geom_point(color=' darkgreen') + 
-    geom_line(color=' darkgreen') + 
-    xlab('Maximum interval size (days)') + 
-    ylab('Survey effort (10,000 days) ') +
-    ggtitle(spec) + 
-    geom_point(aes(x=max_interval_size, y=Ppresence/coeff), color=' darkblue') + 
-    geom_line(aes(x=max_interval_size, y=Ppresence/coeff), color=' darkblue') +
-    scale_y_continuous(sec.axis = 
-                         sec_axis(~.*coeff, name="Proportion of cameras with detections")) +
-    theme(plot.title = element_text(face='bold.italic'),
-          axis.title.y.left = element_text(color='darkgreen'),
-          axis.title.y.right = element_text(color='darkblue')) +
-    geom_vline(xintercept=df$max_interval_size[df$z == max(df$z)], linetype='dashed')
-  
-  coeff2 <- 5
-  p2 <- ggplot(df, aes(x=max_interval_size, y=z)) + 
-    geom_point(color=' darkgreen') + 
-    geom_line(color=' darkgreen') +
-    xlab('Maximum interval size (days)') + 
-    ylab('z-value') +
-    geom_point(aes(x=max_interval_size, y=optimal_interval_size/coeff2), color=' darkblue') + 
-    geom_line(aes(x=max_interval_size, y=optimal_interval_size/coeff2), color=' darkblue') +
-    scale_y_continuous(sec.axis = 
-                         sec_axis(~.*coeff2, name="Optimal interval size (days)")) +
-    theme(plot.title = element_text(face='bold.italic'),
-          axis.title.y.left = element_text(color='darkgreen'),
-          axis.title.y.right = element_text(color='darkblue')) + 
-    geom_vline(xintercept=df$max_interval_size[df$z == max(df$z)], linetype='dashed')
-  
-  tiff(filename=paste('./results/figures/FSC and nonFSC/optimal interval size', spec, '.tiff'), 
-       height=5, width=5, units='in', res=300)
-  plot(ggarrange(p1 + rremove("xlab"), p2, labels=c('A', 'B'), nrow = 2))
-  dev.off()
-  
-  time_interval <- optimal_interval_size
   # create new dets-matrix with the right time intervals:
-  n_intervals <- floor(200/time_interval)
+  n_intervals <- floor(max(survey_effort_per_cam)/time_interval)
   stu_dur <- n_intervals*time_interval
   dets2 <- dets[,1:stu_dur]
-  dets3 <- matrix(0, 455, n_intervals)
+  dets3 <- matrix(0, length(survey_effort_per_cam), n_intervals)
   x <- sort(rep(1:n_intervals, time_interval))
-  for (i3 in 1:455) {
+  for (i3 in 1:length(survey_effort_per_cam)) {
     dets3[i3,] <- tapply(dets2[i3,], x, max)
   }
   
-  study_duration <- optimal_interval_size*2  
+  min_study_duration <- time_interval*nT  
     
   # we need to remove all camera traps with effort < study_duration:
-  n_intervals <- (study_duration/time_interval)
-  dets4 <- dets3[cov$Effort >= study_duration,]
-  cov2 <- cov[cov$Effort >= study_duration,]
+  dets4 <- dets3[cov$Effort >= min_study_duration,]
+  cov2 <- cov[cov$Effort >= min_study_duration,]
   
-  Ppresence <- df$Ppresence[(df$survey_effort*df$z) == 
-                             max(df$survey_effort*df$z)]
-  survey_effort <- df$survey_effort[(df$survey_effort*df$z) == 
-                                  max(df$survey_effort*df$z)]
+  survey_effort <- length(dets4[!is.na(dets4)])*time_interval
+  dets5 <- dets4
+  dets5[is.na(dets5)] <- 0
+  Ppresence <- sum(rowSums(dets5) > 0) / length(dets5[,1])
+  n_cams <- length(dets5[,1])
   
   umf <- unmarkedFrameOccu(y=dets4, siteCovs=cov2)
       
@@ -144,8 +71,9 @@ royle_nichols_stats = function(i){
   
   data <- data.frame(species = spec, 
                      time_interval = time_interval, 
+                     min_number_of_intervals = nT,
                      survey_effort = survey_effort, 
-                     n_cams = length(cov2$Cam), 
+                     n_cams = n_cams, 
                      z = s1$state[length(s1$state$Estimate),3], 
                      P = s1$state[length(s1$state$Estimate),4], 
                      p_presence=Ppresence,
@@ -155,24 +83,26 @@ royle_nichols_stats = function(i){
   
   # with dT = 5:
   time_interval <- 5
-  n_intervals <- floor(200/time_interval)
+  n_intervals <- floor(max(survey_effort_per_cam)/time_interval)
   stu_dur <- n_intervals*time_interval
   dets2 <- dets[,1:stu_dur]
-  dets3 <- matrix(0, 455, n_intervals)
+  dets3 <- matrix(0, length(survey_effort_per_cam), n_intervals)
   x <- sort(rep(1:n_intervals, time_interval))
-  for (i3 in 1:455) {
+  for (i3 in 1:length(survey_effort_per_cam)) {
     dets3[i3,] <- tapply(dets2[i3,], x, max)
   }
   
-  study_duration <- 10  
+  min_study_duration <- time_interval*nT  
   
   # we need to remove all camera traps with effort < study_duration:
-  n_intervals <- (study_duration/time_interval)
-  dets4 <- dets3[cov$Effort >= study_duration,]
-  cov2 <- cov[cov$Effort >= study_duration,]
+  dets4 <- dets3[cov$Effort >= min_study_duration,]
+  cov2 <- cov[cov$Effort >= min_study_duration,]
   
-  Ppresence <- df$Ppresence[df$max_interval_size == 10]
-  survey_effort <- df$survey_effort[df$max_interval_size == 10]
+  survey_effort <- length(dets4[!is.na(dets4)])*time_interval
+  dets5 <- dets4
+  dets5[is.na(dets5)] <- 0
+  Ppresence <- sum(rowSums(dets5) > 0) / length(dets5[,1])
+  n_cams <- length(dets5[,1])
   
   umf <- unmarkedFrameOccu(y=dets4, siteCovs=cov2)
   
@@ -193,8 +123,9 @@ royle_nichols_stats = function(i){
 
   data2 <- data.frame(species = spec, 
                      time_interval = time_interval, 
+                     min_number_of_intervals = nT,
                      survey_effort = survey_effort, 
-                     n_cams = length(cov2$Cam), 
+                     n_cams = n_cams, 
                      z = s1$state[length(s1$state$Estimate),3], 
                      P = s1$state[length(s1$state$Estimate),4], 
                      p_presence=Ppresence,
@@ -203,7 +134,7 @@ royle_nichols_stats = function(i){
               append=TRUE, col.names = FALSE, row.names = FALSE)
 }
 
-royle_nichols_stats(1)
+royle_nichols_stats(2)
 
 i = 1:35 # there are 35 species that we want to analyse
 
