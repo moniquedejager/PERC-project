@@ -32,8 +32,36 @@ for (i in 2:10){
   df <- rbind(df, df2)
 }
 
-df$logitPpres = log(df$Ppresence/(1 - df$Ppresence))
-df2 = df[!is.infinite(df$logitPpres),]
+df$logitPpres <- log(df$Ppresence/(1 - df$Ppresence))
+df2 <- df[!is.infinite(df$logitPpres),]
+
+# relation between average density and Ppresence:
+df2$SD2 <- c('sampling one week', 
+             'sampling one month', 
+             'sampling three months',
+             'sampling one year',
+             rep('sampling one week', length(df2$dens1) - 4))
+df2$SD2[df2$original_SD == 7] <- 'sampling one week'
+df2$SD2[df2$original_SD == 28] <- 'sampling one month'
+df2$SD2[df2$original_SD == 92] <- 'sampling three months'
+df2$SD2[df2$original_SD == 365] <- 'sampling one year'
+df2$SD2 <- factor(df2$SD2, labels = c('sampling one week', 
+                                      'sampling one month', 
+                                      'sampling three months',
+                                      'sampling one year'))
+sel <- (df2$nCams == 25)&(df2$dT == 1)&(df2$original_SD %in% c(7, 28, 92, 365))
+df2$mDens <- (df2$dens1 + df2$dens2)/2
+windows(height=6, width=6)
+
+tiff(filename='./results/figures/simulations/Ppresence_per_average_density.tiff', 
+     height=6, width=6, units='in', res=300)
+ggplot(df2[sel,], aes(x=mDens/100, y=logitPpres)) + 
+  geom_point() + 
+  scale_x_continuous(trans='log10') + 
+  facet_wrap(vars(SD2)) + 
+  xlab(expression(paste('Average density (individuals ', km^-2, ' )'))) + 
+  ylab('Proportion of cameras with detections (logit transformed)')
+dev.off()
 
 # Fit a model to the data that calculates the z-value from dT, survey effort, 
 # and Ppresence (with dT transformed to fT (fraction of total study duration),
