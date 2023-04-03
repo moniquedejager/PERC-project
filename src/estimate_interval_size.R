@@ -1,8 +1,11 @@
 estimate_interval_size <- function(pres_abs_matrix){
-  # this function estimates the interval size that should be used 
-  # in the Royle-Nichols occupancy model, given
-  # 1. the presence/absence matrix
-  # 2. the minimum acceptable number of intervals
+  # this function estimates the interval size (in days)
+  # and the minimum number of intervals (cameras with less sampling effort
+  # than the interval size times the minimum number of intervals should be
+  # disregarded) that should be used 
+  # in the Royle-Nichols occupancy model, given the presence/absence matrix
+  # (0/1/NA per day (=column) and per camera (= row))
+  
   library(ggplot2)
   library(ggpubr)
   
