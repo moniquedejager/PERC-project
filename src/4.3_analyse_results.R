@@ -18,6 +18,8 @@ for (i in 2:length(spec)){
 df$cols = 0 + 1*(df$P < 0.05) + 1*((df$P < 0.05)&(df$z < 0))
 df$cols2 = factor(df$cols, labels = c("No significant effect", "More abundant in non-FSC forest", "More abundant in FSC forest"))
 
+summary(lm(time_interval~p_presence+min_number_of_intervals+survey_effort,data=df))
+
 sel <- (df$type == 'optimal dT')
 df2 <- df[sel,]
 i <- order(df2$z)
