@@ -68,20 +68,48 @@ dev.off()
 # which is logit-transformed as this ranges between 0 and 1. Ppresence is also
 # logit transformed. 
 # survey effort should be positively log-linearly related to the z-value 
+# use half of the dataset to fit the model on, and the other half to validate
 
+df2 <- df[df$sim_nr < 6,]
 y <- df2$z
 x1 <- df2$dT 
 x2 <- 1/(df2$StudyDuration * df2$nCams * 2)
 x3 <- df2$logitPpres
+x3[df2$Ppresence == 0] = -4
+x3[df2$Ppresence == 1] = 4
 x4 <- 1/(df2$nCams*2)
+
+df3 <- data.frame(x1=x1, x2=x2, x3=x3, x4=x4, y=y)
 
 mod <- lm(y~x1*x2*x3*x4+ 
             I(x1^2)*x2*I(x3^2)*x4 + 
-            I(x1^3)*x2*I(x3^3)*x4)
+            I(x1^3)*x2*I(x3^3)*x4, data=df3)
 summary(mod)
 # R2 = 0.583
 
+df2 <- df[df$sim_nr > 5,]
+y <- df2$z
+x1 <- df2$dT 
+x2 <- 1/(df2$StudyDuration * df2$nCams * 2)
+x3 <- df2$logitPpres
+x3[df2$Ppresence == 0] = -4
+x3[df2$Ppresence == 1] = 4
+x4 <- 1/(df2$nCams*2)
+new_df <- data.frame(x1=x1, x2=x2, x3=x3, x4=x4)
+
+y2 <- predict(mod, new_df)
+residuals <- (y - y2)
+range(residuals[!is.na(residuals)])
+plot(y, y2)
+lines(c(-10,-10), c(20, 20), col='orange', lwd=2)
+
+summary(lm(y~y2))
+
 s = summary(mod)
+range(s$residuals)
+sd(s$residuals)
+
+
 
 write.table(s$coefficients, 
             './results/output/simulations/to_estimate_z_values.txt', 
@@ -100,6 +128,9 @@ for (i in unique(group)) {
 write.table(df3, './results/output/simulations/highest_z_values.txt', append=FALSE, col.names=TRUE, row.names = FALSE)
 
 df3 <- read.table('./results/output/simulations/highest_z_values.txt', header=TRUE)
+
+
+
 
 y <- df3$z
 x1 <- 1/(df3$StudyDuration*df3$nCams*2)
