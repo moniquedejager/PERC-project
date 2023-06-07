@@ -138,10 +138,10 @@ nT <- df$min_number_of_intervals[df$z == max(df$z)]
 #df$min_number_of_intervals <- factor(df$min_number_of_intervals)
 
 windows(height=5, width=5)
-ggplot(df, aes(x=interval_size, y=min_number_of_intervals, fill=1/z)) + 
+ggplot(df, aes(x=interval_size, y=min_number_of_intervals, fill=1/exp(z))) + 
   geom_raster() + 
   scale_fill_continuous(type='viridis', name='Model fit', trans='reverse', 
-                        breaks=c(min(1/df$z),max(1/df$z)),labels=c("Best fit","Worst fit")) + 
+                        breaks=c(min(1/exp(df$z)),max(1/exp(df$z))),labels=c("Best fit","Worst fit")) + 
   xlab('Interval size (days, dT)') + 
   ylab('Minimum number of intervals (nT)') + 
   theme_bw() +
